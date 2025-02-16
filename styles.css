@@ -1,0 +1,100 @@
+/* تعديلات عامة */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+/* شعار التطبيق واسم التطبيق */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+}
+
+h1 {
+    color: #006400; /* أخضر غامق قليلاً */
+    margin: 0;
+}
+
+/* عنوان وروابط التواصل الاجتماعي */
+.social-links {
+    text-align: center;
+    padding: 20px;
+}
+
+.link-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.animated-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #000;
+    transition: transform 0.5s ease-in-out;
+}
+
+.animated-link img {
+    width: 30px;
+    height: 30px;
+    animation: rotate 5s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* شكل هندسي كتصميم عصري */
+.divider {
+    height: 2px;
+    background-color: #006400; /* أخضر غامق قليلاً */
+    margin: 20px 0;
+}
+
+/* عنوان وشرح التطبيق */
+.about {
+    text-align: center;
+    padding: 20px;
+}
+
+/* نهاية الصفحة */
+footer {
+    background-color: #006400; /* أخضر غامق قليلاً */
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-around;
+}
+
+.footer-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.footer-item img {
+    width: 20px;
+    height: 20px;
+}
