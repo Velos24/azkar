@@ -24,9 +24,9 @@ header {
 }
 
 .logo {
-    width: 50px;
-    height: 50px;
-    margin-right: 20px; /* زيادة المسافة بين الشعار والنص */
+    width: 30px; /* تصغير الشعار */
+    height: 30px;
+    margin-right: 50px; /* زيادة المسافة بين الشعار والنص */
 }
 
 h1 {
@@ -55,20 +55,35 @@ h1 {
     color: #ffffff;
     transition: opacity 0.5s ease-in-out;
     opacity: 0;
-    animation: fadeIn 1s forwards;
 }
 
-.animated-link img {
-    width: 30px;
-    height: 30px;
+.from-right {
+    animation: fadeInFromRight 1s forwards;
 }
 
-@keyframes fadeIn {
+.from-left {
+    animation: fadeInFromLeft 1s forwards;
+}
+
+@keyframes fadeInFromRight {
     from {
         opacity: 0;
+        transform: translateX(100px);
     }
     to {
         opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }
 
@@ -117,5 +132,22 @@ footer {
     }
     to {
         opacity: 1;
+    }
+}
+
+/* أنميشن الاهتزاز عند الضغط على الشعار */
+.logo:hover {
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-10px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(10px);
     }
 }
