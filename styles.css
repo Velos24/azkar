@@ -3,7 +3,9 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #1a1a1a; /* لون داكن */
+    color: #ffffff; /* لون نص أبيض */
+    direction: rtl; /* لجعل النصوص من اليمين إلى اليسار */
 }
 
 /* شعار التطبيق واسم التطبيق */
@@ -12,18 +14,25 @@ header {
     align-items: center;
     justify-content: space-between;
     padding: 20px;
-    background-color: #fff;
+    background-color: #2a2a2a; /* لون داكن قليلاً */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
 }
 
 .logo {
     width: 50px;
     height: 50px;
+    margin-right: 10px;
 }
 
 h1 {
-    color: #006400; /* أخضر غامق قليلاً */
+    color: #00ff00; /* أخضر فاتح للشعار */
     margin: 0;
+    font-size: 24px;
 }
 
 /* عنوان وروابط التواصل الاجتماعي */
@@ -34,8 +43,8 @@ h1 {
 
 .link-container {
     display: flex;
-    justify-content: center;
-    gap: 20px;
+    flex-direction: column; /* ترتيب الروابط بشكل عمودي */
+    gap: 10px;
 }
 
 .animated-link {
@@ -43,29 +52,30 @@ h1 {
     align-items: center;
     gap: 10px;
     text-decoration: none;
-    color: #000;
-    transition: transform 0.5s ease-in-out;
+    color: #ffffff;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
 }
 
 .animated-link img {
     width: 30px;
     height: 30px;
-    animation: rotate 5s linear infinite;
 }
 
-@keyframes rotate {
+@keyframes fadeIn {
     from {
-        transform: rotate(0deg);
+        opacity: 0;
     }
     to {
-        transform: rotate(360deg);
+        opacity: 1;
     }
 }
 
 /* شكل هندسي كتصميم عصري */
 .divider {
     height: 2px;
-    background-color: #006400; /* أخضر غامق قليلاً */
+    background-color: #00ff00; /* أخضر فاتح للخط الفاصل */
     margin: 20px 0;
 }
 
@@ -77,15 +87,16 @@ h1 {
 
 /* نهاية الصفحة */
 footer {
-    background-color: #006400; /* أخضر غامق قليلاً */
-    color: #fff;
+    background-color: #2a2a2a; /* لون داكن قليلاً */
+    color: #ffffff;
     text-align: center;
     padding: 20px;
 }
 
 .footer-content {
     display: flex;
-    justify-content: space-around;
+    flex-direction: column; /* ترتيب العناصر بشكل عمودي */
+    gap: 10px;
 }
 
 .footer-item {
@@ -95,6 +106,6 @@ footer {
 }
 
 .footer-item img {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
 }
