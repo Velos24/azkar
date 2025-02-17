@@ -14,23 +14,24 @@ header {
     display: flex;
     align-items: center;
     justify-content: flex-end; /* وضع الشعار والنص في اليمين */
-    padding: 20px;
-    background-color: transparent; /* خلفية شفافة */
+    padding: 15px; /* مسافة من الأطراف */
+    background-color: #2a2a2a; /* لون الخلفية الداكنة */
+    margin: 15px 15px 0 15px; /* مسافة من اليمين واليسار والأعلى بمقدار 15px */
+    border-radius: 20px; /* حواف مدورة */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .logo-container {
     display: flex;
     align-items: center;
-    gap: 30px; /* زيادة المسافة بين الشعار والنص */
-    background-color: #2a2a2a; /* خلفية داكنة قليلاً */
-    padding: 10px 20px;
-    border-radius: 20px; /* حواف مدورة */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    gap: 15px; /* زيادة المسافة بين الشعار والنص بمقدار 15px */
+    padding-right: 15px; /* مسافة إضافية من الجهة اليمنى */
 }
 
 .logo {
     width: 40px; /* زيادة حجم الشعار قليلاً */
     height: 40px;
+    margin-left: 15px; /* مسافة بين الشعار والطرف الأيمن */
 }
 
 h1 {
@@ -38,6 +39,13 @@ h1 {
     margin: 0;
     font-size: 24px;
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
+}
+
+/* شكل هندسي كتصميم عصري (خط مستقيم) */
+.divider {
+    height: 2px; /* ارتفاع الخط */
+    background-color: #006400; /* لون الخط مطابق للمربع الأخضر */
+    margin: 15px 15px 0 15px; /* مسافة من اليمين واليسار بمقدار 15px */
 }
 
 /* عنوان وروابط التواصل الاجتماعي */
@@ -98,41 +106,6 @@ h1 {
     to {
         opacity: 1;
         transform: translateX(0);
-    }
-}
-
-/* شكل هندسي كتصميم عصري */
-.divider {
-    height: 20px; /* ارتفاع الخط */
-    background-color: transparent;
-    margin: 20px 0;
-    position: relative;
-}
-
-.divider::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 20px; /* زيادة ارتفاع الخط */
-    background: repeating-linear-gradient(
-        -45deg,
-        #00ff00 0px, 
-        #00ff00 10px, 
-        transparent 10px, 
-        transparent 20px
-    ); /* تصميم الخط المتعرج */
-    animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
-}
-
-/* أنميشن التلاشي العام */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
     }
 }
 
