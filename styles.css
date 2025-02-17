@@ -13,11 +13,10 @@ body {
 header {
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* وضع الشعار والنص في اليمين */
+    justify-content: flex-start; /* وضع الشعار والنص في اليسار */
     padding: 15px;
     background-color: #2a2a2a; /* لون الخلفية الداكنة */
-    margin: 0 15px 15px 15px; /* مسافة من الأطراف الجانبية والأعلى */
-    border-radius: 20px; /* حواف مدورة */
+    width: 100%; /* عرض كامل للشاشة */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -30,7 +29,6 @@ header {
 .logo {
     width: 40px; /* زيادة حجم الشعار قليلاً */
     height: 40px;
-    margin-left: 15px; /* مسافة بين الشعار والطرف الأيمن */
 }
 
 h1 {
@@ -118,6 +116,13 @@ h1 {
     opacity: 0; /* الشفافية الأولية */
     animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
+}
+
+.about p {
+    line-height: 1.6; /* تحسين تنسيق النص */
+    font-size: 16px; /* حجم نص مناسب */
+    max-width: 80%; /* تحديد عرض النص لتكون الصفحة أكثر تنظيمًا */
+    margin: 0 auto; /* تمركز النص */
 }
 
 /* نهاية الصفحة */
