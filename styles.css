@@ -14,9 +14,9 @@ header {
     display: flex;
     align-items: center;
     justify-content: flex-end; /* وضع الشعار والنص في اليمين */
-    padding: 15px; /* مسافة داخلية من الحواف */
+    padding: 15px;
     background-color: #2a2a2a; /* لون الخلفية الداكنة */
-    margin: 0 15px 15px 15px; /* مسافة من اليمين واليسار بمقدار 15px ومن الأسفل بمقدار 15px */
+    margin: 0 15px 15px 15px; /* مسافة من الأطراف الجانبية والأعلى */
     border-radius: 20px; /* حواف مدورة */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -30,6 +30,7 @@ header {
 .logo {
     width: 40px; /* زيادة حجم الشعار قليلاً */
     height: 40px;
+    margin-left: 15px; /* مسافة بين الشعار والطرف الأيمن */
 }
 
 h1 {
@@ -43,7 +44,7 @@ h1 {
 .divider {
     height: 2px; /* ارتفاع الخط */
     background-color: #006400; /* لون الخط مطابق للمربع الأخضر */
-    margin: 15px 15px 0 15px; /* مسافة من اليمين واليسار بمقدار 15px */
+    margin: 15px 15px 0 15px; /* مسافة من الأطراف الجانبية فقط */
 }
 
 /* عنوان وروابط التواصل الاجتماعي */
@@ -140,9 +141,11 @@ footer {
     text-align: center;
     padding: 20px;
     border-radius: 30px 30px 0 0; /* حواف مدورة بمقدار 30px */
-    margin: 0 5px; /* تقليل المسافة من الأطراف الجانبية إلى 5px وإزالة المسافة من الأسفل */
+    margin: 0 5px 0 5px; /* تقليل المسافة من الأطراف الجانبية وإزالة المسافة من الأسفل */
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1); /* ظل بسيط للمربع الأخضر */
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
+    position: relative; /* ضبط الموضع */
+    width: calc(100% - 10px); /* ضبط العرض ليتماشى مع الحواف */
 }
 
 .footer-content {
