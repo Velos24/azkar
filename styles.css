@@ -9,14 +9,19 @@ body {
     overflow-x: hidden; /* إزالة أي فراغ جانبي */
 }
 
-/* شعار التطبيق واسم التطبيق */
+/* خلفية النص والشعار الأساسيين (على طول الصفحة بالكامل) */
 header {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* وضع الشعار والنص في اليسار */
+    justify-content: flex-end; /* وضع الشعار والنص في اليمين */
     padding: 15px;
     background-color: #2a2a2a; /* لون الخلفية الداكنة */
     width: 100%; /* عرض كامل للشاشة */
+    height: 100vh; /* ارتفاع كامل للشاشة */
+    position: fixed; /* جعل الخلفية ثابتة على طول الصفحة */
+    top: 0;
+    left: 0;
+    z-index: 1; /* ضبط الطبقات */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -49,6 +54,7 @@ h1 {
 .social-links {
     text-align: center;
     padding: 20px;
+    margin-top: 100px; /* تجنب التداخل مع الخلفية الثابتة */
 }
 
 .link-container {
@@ -61,7 +67,7 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center; /* مركز العناصر */
-    text-decoration: none;
+    text-decoration: none; /* إزالة تأثير النقر */
     color: #ffffff; /* لون النص أبيض */
     opacity: 0; /* الشفافية الأولية */
     animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
@@ -75,6 +81,7 @@ h1 {
     background-color: #3a3a3a; /* خلفية داكنة قليلاً */
     border-radius: 20px; /* حواف مدورة */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    outline: none; /* إزالة تأثير الضغط الأزرق */
 }
 
 .icon {
