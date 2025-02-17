@@ -14,9 +14,9 @@ header {
     display: flex;
     align-items: center;
     justify-content: flex-end; /* وضع الشعار والنص في اليمين */
-    padding: 15px; /* مسافة من الأطراف */
+    padding: 15px; /* مسافة داخلية من الحواف */
     background-color: #2a2a2a; /* لون الخلفية الداكنة */
-    margin: 15px 15px 0 15px; /* مسافة من اليمين واليسار والأعلى بمقدار 15px */
+    margin: 0 15px 15px 15px; /* مسافة من اليمين واليسار بمقدار 15px ومن الأسفل بمقدار 15px */
     border-radius: 20px; /* حواف مدورة */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -25,13 +25,11 @@ header {
     display: flex;
     align-items: center;
     gap: 15px; /* زيادة المسافة بين الشعار والنص بمقدار 15px */
-    padding-right: 15px; /* مسافة إضافية من الجهة اليمنى */
 }
 
 .logo {
     width: 40px; /* زيادة حجم الشعار قليلاً */
     height: 40px;
-    margin-left: 15px; /* مسافة بين الشعار والطرف الأيمن */
 }
 
 h1 {
@@ -142,7 +140,7 @@ footer {
     text-align: center;
     padding: 20px;
     border-radius: 30px 30px 0 0; /* حواف مدورة بمقدار 30px */
-    margin: 15px; /* إضافة مسافة بين المربع الأخضر والحواف */
+    margin: 0 5px; /* تقليل المسافة من الأطراف الجانبية إلى 5px وإزالة المسافة من الأسفل */
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1); /* ظل بسيط للمربع الأخضر */
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
 }
