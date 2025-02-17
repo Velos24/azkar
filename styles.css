@@ -9,7 +9,7 @@ body {
     overflow-x: hidden; /* إزالة أي فراغ جانبي */
 }
 
-/* خلفية النص والشعار الأساسيين (على طول الصفحة بالكامل) */
+/* شعار التطبيق واسم التطبيق */
 header {
     display: flex;
     align-items: center;
@@ -17,11 +17,7 @@ header {
     padding: 15px;
     background-color: #2a2a2a; /* لون الخلفية الداكنة */
     width: 100%; /* عرض كامل للشاشة */
-    height: 100vh; /* ارتفاع كامل للشاشة */
-    position: fixed; /* جعل الخلفية ثابتة على طول الصفحة */
-    top: 0;
-    left: 0;
-    z-index: 1; /* ضبط الطبقات */
+    height: auto; /* ارتفاع ديناميكي بناءً على المحتوى */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -54,7 +50,6 @@ h1 {
 .social-links {
     text-align: center;
     padding: 20px;
-    margin-top: 100px; /* تجنب التداخل مع الخلفية الثابتة */
 }
 
 .link-container {
@@ -144,15 +139,4 @@ footer {
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
     position: relative; /* ضبط الموضع */
     width: calc(100% - 10px); /* ضبط العرض ليتماشى مع الحواف */
-}
-
-.footer-content {
-    display: flex;
-    flex-direction: column; /* ترتيب العناصر بشكل عمودي */
-    gap: 10px;
-}
-
-.footer-item {
-    opacity: 0; /* الشفافية الأولية */
-    animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
 }
