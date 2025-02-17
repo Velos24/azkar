@@ -26,7 +26,7 @@ header {
 .logo {
     width: 40px; /* زيادة حجم الشعار قليلاً */
     height: 40px;
-    margin-right: 20px; /* زيادة المسافة بين الشعار والنص */
+    margin-right: 30px; /* زيادة المسافة بين الشعار والنص */
 }
 
 h1 {
@@ -52,10 +52,8 @@ h1 {
     align-items: center;
     justify-content: center; /* مركز العناصر */
     text-decoration: none;
-    color: #ffffff;
-    transition: opacity 0.5s ease-in-out;
-    opacity: 0;
-    animation: fadeIn 1s forwards;
+    color: #ffffff; /* لون النص أبيض */
+    opacity: 1; /* إزالة الشفافية للعناصر */
 }
 
 .link-background {
@@ -90,15 +88,15 @@ h1 {
     height: 2px;
     background-color: #00ff00; /* أخضر فاتح للخط */
     transform-origin: left;
-    animation: drawWave 2s forwards, fadeIn 1s forwards;
+    animation: drawWave 5s linear infinite, fadeIn 1s forwards;
 }
 
 @keyframes drawWave {
     from {
-        transform: scaleX(0);
+        transform: skewX(0) translateX(-100%);
     }
     to {
-        transform: scaleX(1);
+        transform: skewX(-15deg) translateX(100%); /* تحريك الخط بشكل متعرج */
     }
 }
 
