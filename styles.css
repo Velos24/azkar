@@ -66,7 +66,7 @@ h1 {
     text-decoration: none;
     color: #ffffff; /* لون النص أبيض */
     opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromLeft 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
+    animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
 }
 
 .link-background {
@@ -84,27 +84,13 @@ h1 {
     height: 30px;
 }
 
-/* الأنميشن للتلاشي من اليمين */
-@keyframes fadeInFromRight {
+/* أنميشن التلاشي فقط */
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateX(100px);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* الأنميشن للتلاشي من اليسار */
-@keyframes fadeInFromLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-100px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
     }
 }
 
@@ -130,7 +116,7 @@ h1 {
     text-align: center;
     padding: 20px;
     opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromLeft 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
+    animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
     font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
 }
 
@@ -156,5 +142,5 @@ footer {
 
 .footer-item {
     opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromRight 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
+    animation: fadeIn 1s forwards; /* أنميشن التلاشي فقط */
 }
