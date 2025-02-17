@@ -1,49 +1,38 @@
 /* تعديلات عامة */
 body {
-    font-family: 'Tajawal', sans-serif; /* إضافة نوع خط عربي مناسب */
+    font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
     background-color: #1a1a1a; /* لون داكن */
     color: #ffffff; /* لون نص أبيض */
     direction: rtl; /* لجعل النصوص من اليمين إلى اليسار */
-    overflow-x: hidden; /* إزالة أي فراغ جانبي */
 }
 
 /* شعار التطبيق واسم التطبيق */
 header {
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* وضع الشعار والنص في اليمين */
-    padding: 15px; /* مسافة داخلية من الحواف */
-    background-color: #2a2a2a; /* لون الخلفية الداكنة */
-    margin: 0 15px 15px 15px; /* مسافة من اليمين واليسار بمقدار 15px ومن الأسفل بمقدار 15px */
-    border-radius: 20px; /* حواف مدورة */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    justify-content: space-between;
+    padding: 20px;
+    background-color: #2a2a2a; /* لون داكن قليلاً */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .logo-container {
     display: flex;
     align-items: center;
-    gap: 15px; /* زيادة المسافة بين الشعار والنص بمقدار 15px */
 }
 
 .logo {
-    width: 40px; /* زيادة حجم الشعار قليلاً */
-    height: 40px;
+    width: 50px;
+    height: 50px;
+    margin-right: 20px; /* زيادة المسافة بين الشعار والنص */
 }
 
 h1 {
-    color: #ffffff; /* نص أبيض */
+    color: #00ff00; /* أخضر فاتح للشعار */
     margin: 0;
     font-size: 24px;
-    font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
-}
-
-/* شكل هندسي كتصميم عصري (خط مستقيم) */
-.divider {
-    height: 2px; /* ارتفاع الخط */
-    background-color: #006400; /* لون الخط مطابق للمربع الأخضر */
-    margin: 15px 15px 0 15px; /* مسافة من اليمين واليسار بمقدار 15px */
 }
 
 /* عنوان وروابط التواصل الاجتماعي */
@@ -55,82 +44,45 @@ h1 {
 .link-container {
     display: flex;
     flex-direction: column; /* ترتيب الروابط بشكل عمودي */
-    gap: 15px; /* زيادة المسافة بين الروابط */
+    gap: 10px;
 }
 
 .animated-link {
     display: flex;
     align-items: center;
-    justify-content: center; /* مركز العناصر */
-    text-decoration: none;
-    color: #ffffff; /* لون النص أبيض */
-    opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromLeft 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
-}
-
-.link-background {
-    display: flex;
-    align-items: center;
     gap: 10px;
-    padding: 10px 20px;
-    background-color: #3a3a3a; /* خلفية داكنة قليلاً */
-    border-radius: 20px; /* حواف مدورة */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: #ffffff;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
 }
 
-.icon {
-    width: 30px; /* زيادة حجم الأيقونات */
+.animated-link img {
+    width: 30px;
     height: 30px;
 }
 
-/* الأنميشن للتلاشي من اليمين */
-@keyframes fadeInFromRight {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateX(100px);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
     }
 }
 
-/* الأنميشن للتلاشي من اليسار */
-@keyframes fadeInFromLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-100px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* أنميشن الاهتزاز عند الضغط على الشعار */
-.logo:hover {
-    animation: shake 0.5s;
-}
-
-@keyframes shake {
-    0%, 100% {
-        transform: translateX(0);
-    }
-    10%, 30%, 50%, 70%, 90% {
-        transform: translateX(-10px);
-    }
-    20%, 40%, 60%, 80% {
-        transform: translateX(10px);
-    }
+/* شكل هندسي كتصميم عصري */
+.divider {
+    height: 2px;
+    background-color: #00ff00; /* أخضر فاتح للخط الفاصل */
+    margin: 20px 0;
 }
 
 /* عنوان وشرح التطبيق */
 .about {
     text-align: center;
     padding: 20px;
-    opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromLeft 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
-    font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
 }
 
 /* نهاية الصفحة */
@@ -139,10 +91,6 @@ footer {
     color: #ffffff;
     text-align: center;
     padding: 20px;
-    border-radius: 30px 30px 0 0; /* حواف مدورة بمقدار 30px */
-    margin: 0 5px; /* تقليل المسافة من الأطراف الجانبية إلى 5px وإزالة المسافة من الأسفل */
-    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1); /* ظل بسيط للمربع الأخضر */
-    font-family: 'Tajawal', sans-serif; /* نوع خط عربي */
 }
 
 .footer-content {
@@ -152,6 +100,22 @@ footer {
 }
 
 .footer-item {
-    opacity: 0; /* الشفافية الأولية */
-    animation: fadeInFromRight 1s forwards, fadeIn 1s ease-in-out 1s forwards; /* أنميشن التلاشي */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* أنميشن التلاشي المتسارع لكل العناصر */
+* {
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
