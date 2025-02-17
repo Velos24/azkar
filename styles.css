@@ -53,7 +53,6 @@ h1 {
     justify-content: center; /* مركز العناصر */
     text-decoration: none;
     color: #ffffff; /* لون النص أبيض */
-    opacity: 1; /* إزالة الشفافية للعناصر */
 }
 
 .link-background {
@@ -64,6 +63,7 @@ h1 {
     background-color: #3a3a3a; /* خلفية داكنة قليلاً */
     border-radius: 20px; /* حواف مدورة */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 1; /* إزالة الشفافية */
 }
 
 .icon {
