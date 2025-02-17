@@ -6,6 +6,7 @@ body {
     background-color: #1a1a1a; /* لون داكن */
     color: #ffffff; /* لون نص أبيض */
     direction: rtl; /* لجعل النصوص من اليمين إلى اليسار */
+    overflow-x: hidden; /* إزالة أي فراغ جانبي */
 }
 
 /* شعار التطبيق واسم التطبيق */
@@ -77,35 +78,29 @@ h1 {
     background-color: transparent;
     margin: 20px 0;
     position: relative;
+    overflow: hidden; /* إزالة الفراغات الجانبية */
 }
 
 .divider::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    width: 100%;
+    left: -100%; /* البدء من خارج الشاشة */
+    width: 200%; /* زيادة عرض الخط ليتمكن من التحرك بشكل كامل */
     height: 2px;
     background-color: #00ff00; /* أخضر فاتح للخط */
     transform-origin: left;
-    animation: drawWave 5s linear infinite, fadeIn 1s forwards;
+    animation: drawWave 5s linear infinite; /* تحريك الخط بشكل مستمر */
 }
 
 @keyframes drawWave {
     from {
-        transform: skewX(0) translateX(-100%);
+        left: -100%; /* البدء من خارج الشاشة */
+        transform: skewX(-15deg); /* تعرج الخط */
     }
     to {
-        transform: skewX(-15deg) translateX(100%); /* تحريك الخط بشكل متعرج */
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
+        left: 100%; /* الانتهاء خارج الشاشة */
+        transform: skewX(-15deg); /* تعرج الخط */
     }
 }
 
