@@ -3,36 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة الثعبان</title>
-    <link rel="stylesheet" href="style.css">
+    <title>The Last Light of Qadim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-    <div id="game-container">
-        <canvas id="game-board" width="400" height="400"></canvas>
-        <div id="start-screen" class="screen">
-            <h1>لعبة الثعبان</h1>
-            <button id="start-btn">ابدأ اللعب</button>
-            <button id="options-btn">الخيارات</button>
-        </div>
-        <div id="options-screen" class="screen" style="display: none;">
-            <h2>الخيارات</h2>
-            <div class="option">
-                <label for="difficulty">مستوى الصعوبة:</label>
-                <select id="difficulty">
-                    <option value="easy">سهل</option>
-                    <option value="medium">متوسط</option>
-                    <option value="hard">صعب</option>
-                </select>
-            </div>
-            <button id="back-to-menu-btn">العودة</button>
-        </div>
-        <div id="game-over-screen" class="screen" style="display: none;">
-            <h2>انتهت اللعبة!</h2>
-            <p>النتيجة: <span id="final-score">0</span></p>
-            <button id="play-again-btn">إعادة اللعب</button>
-        </div>
-        <div id="score">النتيجة: 0</div>
+<body class="bg-gray-900 text-white font-serif">
+    <div id="app" class="container mx-auto p-4">
+        <header class="text-center my-8">
+            <h1 class="text-5xl font-bold text-yellow-300" style="font-family: 'Amiri', serif;">The Last Light of Qadim</h1>
+            <p class="text-xl text-gray-400 mt-2">آخر ضوء في قديم</p>
+        </header>
+
+        <main>
+            <section id="game-section" class="my-8">
+                <h2 class="text-3xl font-bold text-center text-yellow-200 mb-4">اللعبة</h2>
+                <div id="game-container" class="bg-black border-4 border-yellow-400 rounded-lg mx-auto" style="width: 800px; height: 600px;">
+                    <!-- Phaser game will be embedded here -->
+                </div>
+            </section>
+
+            <section id="story-section" class="my-8 p-6 bg-gray-800 border border-yellow-400 rounded-lg">
+                <h2 class="text-3xl font-bold text-yellow-200 mb-4">القصة</h2>
+                <p class="text-lg text-gray-300">
+                    في عالم عربي خيالي بعد انهيار حضارة قديمة، يتقمص اللاعب دور "راشد"، شاب يحمل مصباحًا سحريًا يكشف عن أسرار الخراب. يجب على راشد استكشاف الأطلال وحل الألغاز القديمة لكشف الحقيقة وراء سقوط حضارته.
+                </p>
+            </section>
+
+            <section id="secrets-section" class="my-8 p-6 bg-gray-800 border border-yellow-400 rounded-lg hidden">
+                <h2 class="text-3xl font-bold text-yellow-200 mb-4">الأسرار</h2>
+                <p class="text-lg text-gray-300">
+                    لقد أكملت اللعبة وكشفت عن الأسرار القديمة.
+                </p>
+            </section>
+        </main>
+
+        <footer class="text-center text-gray-500 my-8">
+            <p>&copy; 2025 The Last Light of Qadim. جميع الحقوق محفوظة.</p>
+        </footer>
     </div>
-    <script src="script.js"></script>
+
+    <script src="js/phaser.min.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
