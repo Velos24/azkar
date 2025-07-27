@@ -1,72 +1,38 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أذكار المؤمن</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500&display=swap" rel="stylesheet"> <!-- إضافة الخط العربي -->
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js" defer></script> <!-- ربط ملف JavaScript -->
+    <title>لعبة الثعبان</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- شعار التطبيق واسم التطبيق -->
-    <header>
-        <div class="logo-container">
-            <img src="https://img.utdstc.com/icon/8b3/d0f/8b3d0f672e9a5caea4f33206ec508aec407e426a2c56aa88d252bc21f030e06c:200" alt="شعار التطبيق" class="logo">
-            <h1>أذكار المؤمن</h1>
+    <div id="game-container">
+        <canvas id="game-board" width="400" height="400"></canvas>
+        <div id="start-screen" class="screen">
+            <h1>لعبة الثعبان</h1>
+            <button id="start-btn">ابدأ اللعب</button>
+            <button id="options-btn">الخيارات</button>
         </div>
-    </header>
-
-    <!-- شكل هندسي كتصميم عصري (خط مستقيم) -->
-    <div class="divider"></div>
-
-    <!-- عنوان وروابط التواصل الاجتماعي -->
-    <section class="social-links">
-        <h2>تابع صفحاتنا عبر:</h2>
-        <div class="link-container">
-            <a href="https://youtube.com/@i_8_w313?si=WgPtc-SZaib8ivyL" class="animated-link">
-                <div class="link-background">
-                    <img src="https://static.vecteezy.com/system/resources/thumbnails/018/930/575/small_2x/youtube-logo-youtube-icon-transparent-free-png.png" alt="YouTube" class="icon">
-                    <span>YouTube - اليوتيوب</span>
-                </div>
-            </a>
-            <a href="https://t.me/i_8_w313" class="animated-link">
-                <div class="link-background">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="Telegram" class="icon">
-                    <span>Telegram - تيليجرام </span>
-                </div>
-            </a>
-            <a href="https://www.instagram.com/i_8_w313?igsh=MXV2amQzZnVyNTQycA==" class="animated-link">
-                <div class="link-background">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/640px-Instagram_icon.png" alt="Instagram" class="icon">
-                    <span>Instagram - انستغرام </span>
-                </div>
-            </a>
-            <a href="https://www.tiktok.com/@i_8_w313?_t=ZS-8tyRaJRcwle&_r=1" class="animated-link">
-                <div class="link-background">
-                    <img src="https://static.vecteezy.com/system/resources/previews/016/716/450/non_2x/tiktok-icon-free-png.png" alt="TikTok" class="icon">
-                    <span>TikTok - تيك توك </span>
-                </div>
-            </a>
+        <div id="options-screen" class="screen" style="display: none;">
+            <h2>الخيارات</h2>
+            <div class="option">
+                <label for="difficulty">مستوى الصعوبة:</label>
+                <select id="difficulty">
+                    <option value="easy">سهل</option>
+                    <option value="medium">متوسط</option>
+                    <option value="hard">صعب</option>
+                </select>
+            </div>
+            <button id="back-to-menu-btn">العودة</button>
         </div>
-    </section>
-
-    <!-- شرح التطبيق -->
-    <section class="about">
-        <h2>ما هو تطبيق أذكار المؤمن؟</h2>
-        <p>
-            هو تطبيق أسلامي متكامل، يحتوي على كل ما يحتاجه المسلم من القرآن الكريم أو الأدعية العامة منها واليومية، بالأضافة إلى الزيارات ومنها اليومية، المناجاة، يوفر التطبيق ميزة عداد الركع عن طريق مستشعر القرب في أغلب الأجهزة لمعالجة مشاكل السهو والنسيان أثناء الصلاة، كذلك عداد التسبيح أو تسبيح السيدة الزهراء عليها السلام، كما يتضمن التقويم الميلادي والهجري وعرض المناسبات الإسلامية في السنة، كما يتميز تطبيقنا بميزة التذكير حيث عند تفعيلها يبدأ التطبيق بعرض رسالة مصغرة في الشاشة كل دقيقتين أثناء تصفحك في الهاتف، يتم تحديث التطبيق باستمرار ونشكر كل من يدعمه.
-        </p>
-    </section>
-
-    <!-- نهاية الصفحة -->
-    <footer>
-        <div class="footer-content">
-            <p>تطبيق مستقل غير منتمي لأي جهة أو مؤسسة دينية، تطبيق غير ربحي.</p>
-            <p>برمجة وتطوير : عبدالله الموسوي</p>
-            <p>جميع حقوق التطبيق محفوظة © 2021-2025</p>
-            <p>تطبيق أذكار المؤمن</p>
+        <div id="game-over-screen" class="screen" style="display: none;">
+            <h2>انتهت اللعبة!</h2>
+            <p>النتيجة: <span id="final-score">0</span></p>
+            <button id="play-again-btn">إعادة اللعب</button>
         </div>
-    </footer>
+        <div id="score">النتيجة: 0</div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
