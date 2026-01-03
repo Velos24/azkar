@@ -3,748 +3,666 @@
 import telebot
 from telebot import types
 import sqlite3
-import os
-import json
-import random
 import time
-
-# ===============================================
-# المتغيرات - قم بتعديلها بنفسك
-# ===============================================
-TOKEN = "YOUR_BOT_TOKEN"  # ضع توكن البوت الخاص بك هنا
-DEV_ID = 123456789  # ضع معرف المطور الأساسي هنا
-# ===============================================
-
-# إعداد البوت
-bot = telebot.TeleBot(TOKEN)
-
-# دالة لإنشاء والاتصال بقاعدة البيانات
-def setup_database():
-    """
-    تقوم هذه الدالة بإنشاء قاعدة بيانات SQLite والجداول اللازمة إذا لم تكن موجودة.
-    """
-    if os.path.exists("telegram_bot.db"):
-        print("Database already exists.")
-        return
-
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-
-    # إنشاء جدول المجموعات
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS groups (
-        group_id INTEGER PRIMARY KEY,
-        group_title TEXT,
-        settings TEXT
-    )
-    ''')
-
-    # إنشاء جدول المستخدمين
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY,
-        first_name TEXT,
-        username TEXT
-    )
-    ''')
-
-    # إنشاء جدول الرتب
-    # rank: 0=member, 1=admin, 2=manager, 3=secondary_dev, 4=primary_dev
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS ranks (
-        user_id INTEGER,
-        group_id INTEGER,
-        rank INTEGER DEFAULT 0,
-        message_count INTEGER DEFAULT 0,
-        PRIMARY KEY (user_id, group_id)
-    )
-    ''')
-
-    print("Database and tables created successfully.")
-
-    conn.commit()
-    conn.close()
-
-# رسالة عند بدء تشغيل البوت في الكونسول
-print("Bot is starting...")
-
-# استدعاء دالة إعداد قاعدة البيانات عند بدء التشغيل
-setup_database()
-
-# ===============================================
-# تعريف الرتب
-# ===============================================
-MEMBER = 0
-ADMIN = 1
-MANAGER = 2
-SECONDARY_DEV = 3
-PRIMARY_DEV = 4
-
-# ===============================================
-# دوال مساعدة
-# ===============================================
-
-def get_user_rank(user_id, group_id):
-    """
-    تجلب رتبة المستخدم في مجموعة معينة.
-    """
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-
-    # المطور الأساسي له أعلى رتبة في كل المجموعات
-    if user_id == DEV_ID:
-        return PRIMARY_DEV
-
-    # التحقق من رتبة المستخدم في قاعدة البيانات
-    cursor.execute("SELECT rank FROM ranks WHERE user_id = ? AND group_id = ?", (user_id, group_id))
-    result = cursor.fetchone()
-
-    if result:
-        rank = result[0]
-    else:
-        # إذا لم يكن المستخدم في قاعدة البيانات، تحقق مما إذا كان مشرفًا في المجموعة
-        try:
-            chat_member = bot.get_chat_member(group_id, user_id)
-            if chat_member.status in ['administrator', 'creator']:
-                rank = ADMIN
-            else:
-                rank = MEMBER
-        except Exception as e:
-            print(f"Error checking chat member status: {e}")
-            rank = MEMBER
-
-        # إضافة المستخدم الجديد إلى قاعدة البيانات بالرتبة الافتراضية
-        cursor.execute("INSERT OR IGNORE INTO ranks (user_id, group_id, rank, message_count) VALUES (?, ?, ?, 0)", (user_id, group_id, rank))
-        conn.commit()
-
-    conn.close()
-    return rank
-
-def update_user_info(message):
-    """
-    تحديث معلومات المستخدم في قاعدة البيانات.
-    """
-    user = message.from_user
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO users (user_id, first_name, username) VALUES (?, ?, ?)",
-                   (user.id, user.first_name, user.username))
-    conn.commit()
-    conn.close()
-
-def add_group_info(message):
-    """
-    إضافة معلومات المجموعة إلى قاعدة البيانات.
-    """
-    chat = message.chat
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    # Initialize with default settings if not present
-    default_settings = json.dumps({
-        'lock_links': False, 'lock_photos': False, 'lock_videos': False,
-        'lock_stickers': False, 'lock_bots': False
-    })
-    cursor.execute("INSERT OR IGNORE INTO groups (group_id, group_title, settings) VALUES (?, ?, ?)",
-                   (chat.id, chat.title, default_settings))
-    conn.commit()
-    conn.close()
-
-# ===============================================
-# إعدادات المجموعة المتقدمة
-# ===============================================
-
-def get_group_settings(group_id):
-    """
-    تجلب إعدادات المجموعة من قاعدة البيانات.
-    """
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT settings FROM groups WHERE group_id = ?", (group_id,))
-    result = cursor.fetchone()
-    conn.close()
-    if result and result[0]:
-        return json.loads(result[0])
-    return {}
-
-def set_group_settings(group_id, settings):
-    """
-    تحفظ إعدادات المجموعة في قاعدة البيانات.
-    """
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE groups SET settings = ? WHERE group_id = ?", (json.dumps(settings), group_id))
-    conn.commit()
-    conn.close()
-
-LOCK_MAP = {
-    "الروابط": "lock_links",
-    "الصور": "lock_photos",
-    "الفيديو": "lock_videos",
-    "الملصقات": "lock_stickers",
-    "البوتات": "lock_bots"
-}
-
-@bot.message_handler(commands=['قفل', 'فتح'])
-def handle_lock_commands(message):
-    if message.chat.type not in ['group', 'supergroup']:
-        bot.reply_to(message, "هذا الأمر يعمل في المجموعات فقط.")
-        return
-
-    admin_id = message.from_user.id
-    chat_id = message.chat.id
-
-    admin_rank = get_user_rank(admin_id, chat_id)
-    if admin_rank < MANAGER: # فقط المدير فأعلى يمكنهم القفل والفتح
-        bot.reply_to(message, "ليس لديك الصلاحية لاستخدام هذا الأمر. (مدير فأعلى)")
-        return
-
-    command = message.text.split()[0].replace('/', '')
-    try:
-        item_to_lock = message.text.split(maxsplit=1)[1]
-    except IndexError:
-        bot.reply_to(message, f"الرجاء تحديد ما تريد {command}ه. (مثال: /قفل الروابط)")
-        return
-
-    if item_to_lock not in LOCK_MAP:
-        bot.reply_to(message, "الخيار المحدد غير صالح. الخيارات المتاحة: " + ", ".join(LOCK_MAP.keys()))
-        return
-
-    settings = get_group_settings(chat_id)
-    lock_key = LOCK_MAP[item_to_lock]
-
-    if command == 'قفل':
-        settings[lock_key] = True
-        set_group_settings(chat_id, settings)
-        bot.reply_to(message, f"✅ تم قفل {item_to_lock} بنجاح.")
-    elif command == 'فتح':
-        settings[lock_key] = False
-        set_group_settings(chat_id, settings)
-        bot.reply_to(message, f"✅ تم فتح {item_to_lock} بنجاح.")
-
-
-# ===============================================
-# لوحة التحكم وأوامر الحماية
-# ===============================================
-
-def create_control_panel(target_user_id):
-    """
-    تنشئ لوحة التحكم مع أزرار الإجراءات.
-    """
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    mute_btn = types.InlineKeyboardButton("كتم", callback_data=f"mute_{target_user_id}")
-    unmute_btn = types.InlineKeyboardButton("الغاء الكتم", callback_data=f"unmute_{target_user_id}")
-    kick_btn = types.InlineKeyboardButton("طرد", callback_data=f"kick_{target_user_id}")
-    restrict_btn = types.InlineKeyboardButton("تقييد", callback_data=f"restrict_{target_user_id}")
-    unrestrict_btn = types.InlineKeyboardButton("الغاء التقييد", callback_data=f"unrestrict_{target_user_id}")
-
-    markup.add(mute_btn, unmute_btn, kick_btn, restrict_btn, unrestrict_btn)
-    return markup
-
-@bot.message_handler(func=lambda message: message.text == "تحكم")
-def show_control_panel(message):
-    if message.chat.type not in ['group', 'supergroup']:
-        bot.reply_to(message, "هذا الأمر يعمل في المجموعات فقط.")
-        return
-
-    if not message.reply_to_message:
-        bot.reply_to(message, "يجب استخدام هذا الأمر بالرد على رسالة المستخدم.")
-        return
-
-    chat_id = message.chat.id
-    admin_id = message.from_user.id
-    target_id = message.reply_to_message.from_user.id
-    target_name = message.reply_to_message.from_user.first_name
-
-    admin_rank = get_user_rank(admin_id, chat_id)
-    target_rank = get_user_rank(target_id, chat_id)
-
-    if admin_rank <= target_rank:
-        bot.reply_to(message, "لا يمكنك التحكم في شخص لديه رتبة مساوية لك أو أعلى منك.")
-        return
-
-    if admin_rank >= ADMIN:
-        markup = create_control_panel(target_id)
-        bot.reply_to(message, f"لوحة التحكم للمستخدم {target_name}:", reply_markup=markup)
-    else:
-        bot.reply_to(message, "ليس لديك الصلاحية لاستخدام هذا الأمر.")
-
-def check_xo_winner(board):
-    # Check rows, columns, and diagonals
-    lines = board + list(zip(*board)) + [[board[i][i] for i in range(3)], [board[i][2-i] for i in range(3)]]
-    for line in lines:
-        if line[0] == line[1] == line[2] and line[0] != " ":
-            return line[0]
-    # Check for draw
-    if all(cell != " " for row in board for cell in row):
-        return "Draw"
-    return None
-
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callback_query(call):
-    # --- XO Game Logic ---
-    if call.data.startswith('xo_'):
-        parts = call.data.split('_')
-        game_id, r, c = int(parts[1]), int(parts[2]), int(parts[3])
-
-        if game_id not in xo_games:
-            bot.answer_callback_query(call.id, "انتهت هذه اللعبة أو لم تعد موجودة.")
-            bot.edit_message_text("لعبة XO غير صالحة.", call.message.chat.id, call.message.message_id)
-            return
-
-        game = xo_games[game_id]
-        player_id = call.from_user.id
-        current_player_symbol = game['turn']
-
-        # Assign second player (O)
-        if 'O' not in game['players'] and player_id != game['players'].get('X'):
-            game['players']['O'] = player_id
-
-        # Check if it's the player's turn
-        if player_id != game['players'].get(current_player_symbol):
-            bot.answer_callback_query(call.id, "ليس دورك للعب.")
-            return
-
-        if game['board'][r][c] == " ":
-            game['board'][r][c] = current_player_symbol
-            winner = check_xo_winner(game['board'])
-
-            if winner:
-                player_name = call.from_user.first_name
-                end_message = f"انتهت لعبة XO!\nالفائز هو {player_name} ({winner})! 🏆" if winner != "Draw" else "انتهت لعبة XO بالتعادل!"
-                bot.edit_message_text(end_message, game_id, call.message.message_id)
-                del xo_games[game_id]
-                return
-
-            game['turn'] = 'O' if current_player_symbol == 'X' else 'X'
-            keyboard = get_xo_keyboard(game_id)
-            bot.edit_message_reply_markup(game_id, call.message.message_id, reply_markup=keyboard)
-            bot.answer_callback_query(call.id)
-        else:
-            bot.answer_callback_query(call.id, "هذا المربع مشغول بالفعل.")
-        return
-
-    # --- Control Panel Logic ---
-    admin_id = call.from_user.id
-    chat_id = call.message.chat.id
-
-    admin_rank = get_user_rank(admin_id, chat_id)
-    if admin_rank < ADMIN:
-        bot.answer_callback_query(call.id, "ليس لديك الصلاحية الكافية.", show_alert=True)
-        return
-
-    try:
-        action, target_id_str = call.data.split('_')
-        target_id = int(target_id_str)
-    except (ValueError, IndexError):
-        # This will catch errors if the callback data is not in the expected format (e.g., from XO)
-        # We can safely ignore these or log them if needed.
-        return
-
-    target_rank = get_user_rank(target_id, chat_id)
-    if admin_rank <= target_rank:
-        bot.answer_callback_query(call.id, "لا يمكنك التحكم في شخص لديه رتبة مساوية لك أو أعلى منك.", show_alert=True)
-        return
-
-    # ... (rest of the control panel logic remains the same)
-    try:
-        if action == 'mute':
-            bot.restrict_chat_member(chat_id, target_id, can_send_messages=False)
-            bot.answer_callback_query(call.id, "تم كتم العضو بنجاح.")
-            bot.edit_message_text("✅ تم كتم العضو.", chat_id, call.message.message_id)
-        elif action == 'unmute':
-            bot.restrict_chat_member(chat_id, target_id,
-                                     can_send_messages=True,
-                                     can_send_media_messages=True,
-                                     can_send_other_messages=True,
-                                     can_add_web_page_previews=True)
-            bot.answer_callback_query(call.id, "تم الغاء كتم العضو بنجاح.")
-            bot.edit_message_text("✅ تم الغاء كتم العضو.", chat_id, call.message.message_id)
-        elif action == 'kick':
-            bot.kick_chat_member(chat_id, target_id)
-            bot.unban_chat_member(chat_id, target_id)
-            bot.answer_callback_query(call.id, "تم طرد العضو بنجاح.")
-            bot.edit_message_text("✅ تم طرد العضو.", chat_id, call.message.message_id)
-        elif action == 'restrict':
-            bot.restrict_chat_member(chat_id, target_id,
-                                     can_send_messages=True,
-                                     can_send_media_messages=False,
-                                     can_send_other_messages=False,
-                                     can_add_web_page_previews=False)
-            bot.answer_callback_query(call.id, "تم تقييد العضو بنجاح.")
-            bot.edit_message_text("✅ تم تقييد العضو (منع الوسائط والروابط).", chat_id, call.message.message_id)
-        elif action == 'unrestrict':
-            bot.restrict_chat_member(chat_id, target_id,
-                                     can_send_messages=True,
-                                     can_send_media_messages=True,
-                                     can_send_other_messages=True,
-                                     can_add_web_page_previews=True)
-            bot.answer_callback_query(call.id, "تم الغاء تقييد العضو بنجاح.")
-            bot.edit_message_text("✅ تم الغاء تقييد العضو.", chat_id, call.message.message_id)
-
-    except Exception as e:
-        print(f"Error in callback handler: {e}")
-        bot.answer_callback_query(call.id, f"حدث خطأ. قد لا يمتلك البوت صلاحيات كافية.", show_alert=True)
-
-
-# ===============================================
-# أوامر الرتب
-# ===============================================
-
-@bot.message_handler(commands=['رفع', 'تنزيل', 'تك'])
-def handle_rank_commands(message):
-    if not message.reply_to_message:
-        bot.reply_to(message, "يجب استخدام هذا الأمر بالرد على رسالة المستخدم.")
-        return
-
-    chat_id = message.chat.id
-    promoter_id = message.from_user.id
-    target_id = message.reply_to_message.from_user.id
-    target_name = message.reply_to_message.from_user.first_name
-
-    promoter_rank = get_user_rank(promoter_id, chat_id)
-    target_rank = get_user_rank(target_id, chat_id)
-
-    command = message.text.split()[0].replace('/', '')
-
-    # أمر "تك"
-    if command == 'تك':
-        if promoter_rank >= ADMIN:
-            if promoter_rank > target_rank:
-                conn = sqlite3.connect('telegram_bot.db')
-                cursor = conn.cursor()
-                cursor.execute("UPDATE ranks SET rank = ? WHERE user_id = ? AND group_id = ?", (MEMBER, target_id, chat_id))
-                conn.commit()
-                conn.close()
-                bot.reply_to(message, f"تم تنزيل {target_name} من جميع الرتب.")
-            else:
-                bot.reply_to(message, "لا يمكنك التحكم في شخص لديه رتبة مساوية لك أو أعلى منك.")
-        else:
-            bot.reply_to(message, "ليس لديك الصلاحية لاستخدام هذا الأمر.")
-        return
-
-    # أوامر الرفع والتنزيل
-    if promoter_rank <= target_rank:
-        bot.reply_to(message, "لا يمكنك التحكم في شخص لديه رتبة مساوية لك أو أعلى منك.")
-        return
-
-    if command == 'رفع':
-        new_rank = -1
-        rank_name = ""
-        if 'مدير' in message.text and promoter_rank >= SECONDARY_DEV:
-            new_rank = MANAGER
-            rank_name = "مدير"
-        elif 'ادمن' in message.text and promoter_rank >= MANAGER:
-            new_rank = ADMIN
-            rank_name = "ادمن"
-        elif 'مطور ثانوي' in message.text and promoter_rank == PRIMARY_DEV:
-            new_rank = SECONDARY_DEV
-            rank_name = "مطور ثانوي"
-        else:
-            bot.reply_to(message, "الرتبة المحددة غير صالحة أو ليس لديك الصلاحية لرفعها.")
-            return
-
-        if new_rank < promoter_rank:
-            conn = sqlite3.connect('telegram_bot.db')
-            cursor = conn.cursor()
-            cursor.execute("INSERT OR REPLACE INTO ranks (user_id, group_id, rank) VALUES (?, ?, ?)", (target_id, chat_id, new_rank))
-            conn.commit()
-            conn.close()
-            bot.reply_to(message, f"تم رفع {target_name} إلى رتبة {rank_name}.")
-        else:
-            bot.reply_to(message, "لا يمكنك رفع شخص لرتبة أعلى من رتبتك أو مساوية لها.")
-
-
-    elif command == 'تنزيل':
-        if target_rank > MEMBER:
-            conn = sqlite3.connect('telegram_bot.db')
-            cursor = conn.cursor()
-            cursor.execute("UPDATE ranks SET rank = ? WHERE user_id = ? AND group_id = ?", (MEMBER, target_id, chat_id))
-            conn.commit()
-            conn.close()
-            bot.reply_to(message, f"تم تنزيل {target_name} من رتبته.")
-        else:
-            bot.reply_to(message, f"{target_name} ليس لديه رتبة ليتم تنزيلها.")
-
-
-def increment_message_count(user_id, group_id):
-    """
-    زيادة عدد رسائل المستخدم في مجموعة معينة.
-    """
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE ranks SET message_count = message_count + 1 WHERE user_id = ? AND group_id = ?", (user_id, group_id))
-    conn.commit()
-    conn.close()
-
-# ===============================================
-# الأوامر التفاعلية والردود
-# ===============================================
+import threading
+import json
+from collections import defaultdict
+
+# ==============================================================================
+# إعدادات البوت والثوابت
+# ==============================================================================
+TOKEN = "8272161809:AAEo9oMiOvBV1lUfANwZbuDvGgAoz1ju8-c"
+DEV_ID = 1346665329
+
+# مستويات الرتب
+RANK_MEMBER = 0
+RANK_DISTINGUISHED = 1
+RANK_ADMIN = 2        # مشرفي التيليجرام
+RANK_MANAGER = 3      # مدير البوت
+RANK_SEC_DEV = 4      # مضيف البوت
+RANK_PRI_DEV = 5      # مالك المجموعة
 
 RANK_NAMES = {
-    MEMBER: "عضو",
-    ADMIN: "مشرف",
-    MANAGER: "مدير",
-    SECONDARY_DEV: "مطور ثانوي",
-    PRIMARY_DEV: "المطور الأساسي"
+    RANK_MEMBER: "عضو",
+    RANK_DISTINGUISHED: "عضو مميز",
+    RANK_ADMIN: "أدمن",
+    RANK_MANAGER: "مدير",
+    RANK_SEC_DEV: "مطور ثانوي",
+    RANK_PRI_DEV: "مطور أساسي (المالك)"
 }
 
-def get_message_count(user_id, group_id):
-    """
-    تجلب عدد رسائل المستخدم من قاعدة البيانات.
-    """
-    conn = sqlite3.connect('telegram_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT message_count FROM ranks WHERE user_id = ? AND group_id = ?", (user_id, group_id))
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else 0
-
-@bot.message_handler(commands=['ايدي', 'ا', 'كشف'])
-def handle_id_command(message):
-    user_to_check = message.reply_to_message.from_user if message.reply_to_message else message.from_user
-    chat_id = message.chat.id
-
-    user_rank_code = get_user_rank(user_to_check.id, chat_id)
-    user_rank_name = RANK_NAMES.get(user_rank_code, "غير معروف")
-    message_count = get_message_count(user_to_check.id, chat_id)
-
-    user_info = (
-        f"👤 **الاسم:** {user_to_check.first_name}\n"
-        f"🔖 **المعرف:** `{user_to_check.id}`\n"
-        f"✒️ **المعرف (يوزر):** @{user_to_check.username or 'لا يوجد'}\n"
-        f"🎖 **الرتبة:** {user_rank_name}\n"
-        f"✉️ **عدد الرسائل:** {message_count}"
-    )
-
-    bot.reply_to(message, user_info, parse_mode='Markdown')
-
-# قاموس الردود التلقائية
-AUTO_REPLIES = {
-    ("هلو", "هلا", "مرحبا"): ["أهلاً بك!", "يا هلا فيك", "مرحبتين 🌷"],
-    ("باي", "مع السلامة"): ["الله معك", "في أمان الله", "نشوفك على خير"],
-    ("خاص"): ["تفضل خاص 💌", "تعال خاص نتفاهم 😉", "الخاص مفتوح دائمًا لك."]
+# إعدادات الحماية الافتراضية
+DEFAULT_SETTINGS = {
+    "lock_links": False,
+    "lock_photos": False,
+    "lock_video": False,
+    "lock_animation": False,
+    "lock_stickers": False,
+    "lock_bots": False,
+    "lock_forward": False,
+    "lock_username": False,
+    "lock_long_msg": False,
+    "lock_flood": True,
+    "lock_spam": True,
+    "flood_limit": 5,      # عدد الرسائل
+    "flood_time": 3,       # خلال ثواني
+    "max_msg_len": 3000,   # طول الرسالة
+    "max_warnings": 3      # الحد الأقصى للإنذارات قبل العقوبة
 }
 
-def handle_auto_replies(message):
-    # Check if message.text is not None and is a string
-    if not isinstance(message.text, str):
-        return False
+# ==============================================================================
+# إدارة قاعدة البيانات (SQLite) مع الكاش
+# ==============================================================================
+class DatabaseManager:
+    def __init__(self, db_name="bot_database.db"):
+        self.db_name = db_name
+        self.lock = threading.Lock()
+        self.conn = sqlite3.connect(self.db_name, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+        self.setup_tables()
 
-    for keywords, replies in AUTO_REPLIES.items():
-        for keyword in keywords:
-            # Use lower() for case-insensitive matching
-            if keyword in message.text.lower():
-                bot.reply_to(message, random.choice(replies))
-                return True # Replied
-    return False # No keyword found
+        # الكاش الداخلي
+        self.cache_settings = {}
+        self.cache_ranks = {}
+        self.cache_replies = {}
+        self.cache_users = {}
+        self.cache_warnings = {}
 
-# ===============================================
-# الألعاب
-# ===============================================
+    def setup_tables(self):
+        with self.lock:
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                first_name TEXT,
+                username TEXT
+            )''')
 
-# --- لعبة XO ---
-xo_games = {}
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS groups (
+                group_id INTEGER PRIMARY KEY,
+                title TEXT,
+                added_by INTEGER
+            )''')
 
-def create_xo_board(game_id):
-    board = [[" ", " ", " "], [" ", " ", " "], [" ", " ", " "]]
-    xo_games[game_id] = {'board': board, 'turn': 'X', 'players': {}}
-    return board
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS group_ranks (
+                group_id INTEGER,
+                user_id INTEGER,
+                rank_level INTEGER,
+                PRIMARY KEY (group_id, user_id)
+            )''')
 
-def get_xo_keyboard(game_id):
-    board = xo_games[game_id]['board']
-    markup = types.InlineKeyboardMarkup()
-    for r_idx, row in enumerate(board):
-        row_btns = [types.InlineKeyboardButton(cell, callback_data=f"xo_{game_id}_{r_idx}_{c_idx}") for c_idx, cell in enumerate(row)]
-        markup.add(*row_btns)
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS group_settings (
+                group_id INTEGER PRIMARY KEY,
+                settings_json TEXT
+            )''')
+
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS custom_replies (
+                group_id INTEGER,
+                keyword TEXT,
+                reply_text TEXT,
+                PRIMARY KEY (group_id, keyword)
+            )''')
+
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS warnings (
+                group_id INTEGER,
+                user_id INTEGER,
+                count INTEGER DEFAULT 0,
+                PRIMARY KEY (group_id, user_id)
+            )''')
+
+            self.conn.commit()
+
+    def get_settings(self, group_id):
+        if group_id in self.cache_settings:
+            return self.cache_settings[group_id]
+
+        with self.lock:
+            self.cursor.execute("SELECT settings_json FROM group_settings WHERE group_id=?", (group_id,))
+            res = self.cursor.fetchone()
+            if res:
+                settings = json.loads(res[0])
+                full_settings = DEFAULT_SETTINGS.copy()
+                full_settings.update(settings)
+                self.cache_settings[group_id] = full_settings
+                return full_settings
+            else:
+                self.cache_settings[group_id] = DEFAULT_SETTINGS.copy()
+                return self.cache_settings[group_id]
+
+    def update_setting(self, group_id, key, value):
+        settings = self.get_settings(group_id)
+        settings[key] = value
+        self.cache_settings[group_id] = settings
+
+        with self.lock:
+            self.cursor.execute("INSERT OR REPLACE INTO group_settings (group_id, settings_json) VALUES (?, ?)",
+                                (group_id, json.dumps(settings)))
+            self.conn.commit()
+
+    def get_custom_rank(self, group_id, user_id):
+        cache_key = f"{group_id}:{user_id}"
+        if cache_key in self.cache_ranks:
+            return self.cache_ranks[cache_key]
+
+        with self.lock:
+            self.cursor.execute("SELECT rank_level FROM group_ranks WHERE group_id=? AND user_id=?", (group_id, user_id))
+            res = self.cursor.fetchone()
+            rank = res[0] if res else 0
+            self.cache_ranks[cache_key] = rank
+            return rank
+
+    def set_custom_rank(self, group_id, user_id, rank_level):
+        with self.lock:
+            if rank_level == RANK_MEMBER:
+                self.cursor.execute("DELETE FROM group_ranks WHERE group_id=? AND user_id=?", (group_id, user_id))
+            else:
+                self.cursor.execute("INSERT OR REPLACE INTO group_ranks (group_id, user_id, rank_level) VALUES (?, ?, ?)",
+                                    (group_id, user_id, rank_level))
+            self.conn.commit()
+
+        cache_key = f"{group_id}:{user_id}"
+        self.cache_ranks[cache_key] = rank_level
+
+    def get_replies(self, group_id):
+        if group_id in self.cache_replies:
+            return self.cache_replies[group_id]
+
+        with self.lock:
+            self.cursor.execute("SELECT keyword, reply_text FROM custom_replies WHERE group_id=?", (group_id,))
+            rows = self.cursor.fetchall()
+            replies = {row[0]: row[1] for row in rows}
+            self.cache_replies[group_id] = replies
+            return replies
+
+    def add_reply(self, group_id, keyword, reply):
+        with self.lock:
+            self.cursor.execute("INSERT OR REPLACE INTO custom_replies (group_id, keyword, reply_text) VALUES (?, ?, ?)",
+                                (group_id, keyword, reply))
+            self.conn.commit()
+        if group_id in self.cache_replies:
+            self.cache_replies[group_id][keyword] = reply
+        else:
+            self.get_replies(group_id)
+
+    def delete_reply(self, group_id, keyword):
+        with self.lock:
+            self.cursor.execute("DELETE FROM custom_replies WHERE group_id=? AND keyword=?", (group_id, keyword))
+            self.conn.commit()
+        if group_id in self.cache_replies and keyword in self.cache_replies[group_id]:
+            del self.cache_replies[group_id][keyword]
+
+    def register_user(self, user):
+        if user.id in self.cache_users: return
+        with self.lock:
+            self.cursor.execute("INSERT OR REPLACE INTO users (user_id, first_name, username) VALUES (?, ?, ?)",
+                                (user.id, user.first_name, user.username))
+            self.conn.commit()
+        self.cache_users[user.id] = True
+
+    def register_group(self, chat, added_by_id):
+        with self.lock:
+            self.cursor.execute("INSERT OR IGNORE INTO groups (group_id, title, added_by) VALUES (?, ?, ?)",
+                                (chat.id, chat.title, added_by_id))
+            self.conn.commit()
+
+    def get_group_adder(self, group_id):
+        with self.lock:
+            self.cursor.execute("SELECT added_by FROM groups WHERE group_id=?", (group_id,))
+            res = self.cursor.fetchone()
+            return res[0] if res else None
+
+    # --- إدارة الإنذارات ---
+    def get_warnings(self, group_id, user_id):
+        key = f"{group_id}:{user_id}"
+        if key in self.cache_warnings:
+            return self.cache_warnings[key]
+        with self.lock:
+            self.cursor.execute("SELECT count FROM warnings WHERE group_id=? AND user_id=?", (group_id, user_id))
+            res = self.cursor.fetchone()
+            count = res[0] if res else 0
+            self.cache_warnings[key] = count
+            return count
+
+    def add_warning(self, group_id, user_id):
+        count = self.get_warnings(group_id, user_id) + 1
+        with self.lock:
+            self.cursor.execute("INSERT OR REPLACE INTO warnings (group_id, user_id, count) VALUES (?, ?, ?)",
+                                (group_id, user_id, count))
+            self.conn.commit()
+        self.cache_warnings[f"{group_id}:{user_id}"] = count
+        return count
+
+    def reset_warnings(self, group_id, user_id):
+        with self.lock:
+            self.cursor.execute("DELETE FROM warnings WHERE group_id=? AND user_id=?", (group_id, user_id))
+            self.conn.commit()
+        self.cache_warnings[f"{group_id}:{user_id}"] = 0
+
+
+# تهيئة البوت وقاعدة البيانات
+bot = telebot.TeleBot(TOKEN, parse_mode='HTML', threaded=True)
+db = DatabaseManager()
+
+# ==============================================================================
+# إدارة الرتب
+# ==============================================================================
+admins_cache = {}
+
+def get_chat_admins_cached(chat_id):
+    now = time.time()
+    if chat_id in admins_cache and (now - admins_cache[chat_id]['timestamp'] < 600):
+        return admins_cache[chat_id]
+    try:
+        admins = bot.get_chat_administrators(chat_id)
+        owner_id = next((a.user.id for a in admins if a.status == 'creator'), None)
+        admin_ids = [a.user.id for a in admins]
+        data = {'owner': owner_id, 'admins': admin_ids, 'timestamp': now}
+        admins_cache[chat_id] = data
+        return data
+    except Exception as e:
+        print(f"Error fetching admins for {chat_id}: {e}")
+        return {'owner': None, 'admins': [], 'timestamp': 0}
+
+def get_user_rank(user_id, chat_id):
+    group_data = get_chat_admins_cached(chat_id)
+    if user_id == group_data['owner']:
+        return RANK_PRI_DEV
+    added_by = db.get_group_adder(chat_id)
+    if added_by and user_id == added_by:
+        return RANK_SEC_DEV
+    custom_rank = db.get_custom_rank(chat_id, user_id)
+    if custom_rank == RANK_MANAGER:
+        return RANK_MANAGER
+    if user_id in group_data['admins']:
+        return RANK_ADMIN
+    if custom_rank == RANK_DISTINGUISHED:
+        return RANK_DISTINGUISHED
+    return RANK_MEMBER
+
+def get_rank_name(rank):
+    return RANK_NAMES.get(rank, "عضو")
+
+# ==============================================================================
+# نظام مكافحة التكرار التدريجي
+# ==============================================================================
+flood_cache = defaultdict(list)
+flood_penalties = {} # {user_id_group_id: level} (1=warned, 2=muted)
+last_cleanup = time.time()
+
+def check_flood(user_id, chat_id, settings):
+    # تنظيف دوري للذاكرة (كل ساعة)
+    global last_cleanup
+    if time.time() - last_cleanup > 3600:
+        flood_cache.clear()
+        flood_penalties.clear()
+        last_cleanup = time.time()
+
+    if not settings['lock_flood']: return None
+
+    key = f"{user_id}_{chat_id}"
+    now = time.time()
+    flood_cache[key] = [t for t in flood_cache[key] if now - t < settings['flood_time']]
+    flood_cache[key].append(now)
+
+    if len(flood_cache[key]) > settings['flood_limit']:
+        flood_cache[key] = []
+        current_level = flood_penalties.get(key, 0)
+
+        if current_level == 0:
+            flood_penalties[key] = 1
+            return "warn"
+        elif current_level == 1:
+            flood_penalties[key] = 2
+            return "mute"
+        else:
+            del flood_penalties[key]
+            return "kick"
+
+    return None
+
+# ==============================================================================
+# لوحة التحكم
+# ==============================================================================
+def create_control_panel(chat_id, target_id, target_name):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    try:
+        member = bot.get_chat_member(chat_id, target_id)
+        is_muted = not member.can_send_messages if member.status == 'restricted' else False
+        is_restricted = False
+        if member.status == 'restricted' and member.can_send_messages and not member.can_send_media_messages:
+            is_restricted = True
+    except:
+        is_muted = False
+        is_restricted = False
+
+    btns = []
+
+    if is_muted:
+        btns.append(types.InlineKeyboardButton("🔊 الغاء كتم", callback_data=f"unmute_{target_id}"))
+    else:
+        btns.append(types.InlineKeyboardButton("🔇 كتم", callback_data=f"mute_{target_id}"))
+
+    if is_restricted:
+        btns.append(types.InlineKeyboardButton("🔓 فك تقييد", callback_data=f"unrestrict_{target_id}"))
+    else:
+        btns.append(types.InlineKeyboardButton("🚫 تقييد ميديا", callback_data=f"restrict_{target_id}"))
+
+    btns.append(types.InlineKeyboardButton("👢 طرد", callback_data=f"kick_{target_id}"))
+    btns.append(types.InlineKeyboardButton("🛑 حظر", callback_data=f"ban_{target_id}"))
+
+    warns = db.get_warnings(chat_id, target_id)
+    btns.append(types.InlineKeyboardButton(f"⚠️ إنذار ({warns})", callback_data=f"warn_{target_id}"))
+    btns.append(types.InlineKeyboardButton("🔄 تصفير إنذارات", callback_data=f"resetwarn_{target_id}"))
+
+    markup.add(*btns)
+    markup.add(types.InlineKeyboardButton("❌ إغلاق", callback_data="close_panel"))
+
     return markup
 
-@bot.message_handler(commands=['xo'])
-def start_xo_game(message):
-    game_id = message.chat.id
-    if game_id in xo_games:
-        bot.reply_to(message, "هناك لعبة XO جارية بالفعل في هذه المجموعة.")
-        return
-    create_xo_board(game_id)
-    xo_games[game_id]['players']['X'] = message.from_user.id
-    keyboard = get_xo_keyboard(game_id)
-    bot.send_message(message.chat.id, f"بدأت لعبة XO!\nاللاعب {message.from_user.first_name} هو X.\nننتظر لاعب O للانضمام.", reply_markup=keyboard)
-
-# --- لعبة أسئle ---
-QUESTIONS = {
-    "ما هي عاصمة العراق؟": "بغداد",
-    "كم عدد قارات العالم؟": "7",
-    "ما هو أطول نهر في العالم؟": "النيل"
-}
-active_questions = {}
-
-@bot.message_handler(commands=['سؤال'])
-def ask_question(message):
-    chat_id = message.chat.id
-    if chat_id in active_questions:
-        bot.reply_to(message, "يوجد سؤال فعال بالفعل. الرجاء الإجابة عليه أولاً.")
-        return
-    question, answer = random.choice(list(QUESTIONS.items()))
-    active_questions[chat_id] = answer.lower()
-    bot.send_message(chat_id, f"سؤال جديد:\n\n{question}")
-
-# --- لعبة أسرع كاتب ---
-fastest_writer_games = {}
-
-@bot.message_handler(commands=['اسرع'])
-def fastest_writer_game(message):
-    chat_id = message.chat.id
-    if chat_id in fastest_writer_games:
-        bot.reply_to(message, "هناك لعبة 'أسرع كاتب' جارية بالفعل.")
-        return
-    word = random.choice(["تليجرام", "بوت", "حماية", "برمجة"])
-    shuffled_word = " ".join(random.sample(word, len(word)))
-    fastest_writer_games[chat_id] = word
-    bot.send_message(chat_id, f"أسرع شخص يكتب الكلمة التالية بشكل صحيح:\n\n`{shuffled_word}`")
-
-# --- معالجات الألعاب ---
-def check_game_answers(message):
-    chat_id = message.chat.id
-    # التحقق من إجابات الأسئلة
-    if chat_id in active_questions:
-        if message.text.lower() == active_questions[chat_id]:
-            bot.reply_to(message, f"إجابة صحيحة! 🎉 أحسنت يا {message.from_user.first_name}.")
-            del active_questions[chat_id]
-            return True
-    # التحقق من إجابات أسرع كاتب
-    if chat_id in fastest_writer_games:
-        if message.text == fastest_writer_games[chat_id]:
-            bot.reply_to(message, f"أنت الأسرع! 🏆 فاز {message.from_user.first_name}.")
-            del fastest_writer_games[chat_id]
-            return True
-    return False
-
-# ===============================================
-# نظام مكافحة التكرار (Anti-Flood)
-# ===============================================
-user_message_times = {}
-FLOOD_LIMIT = 5  # عدد الرسائل
-FLOOD_WINDOW = 3  # خلال كم ثانية
-
-def check_for_flood(message):
-    """
-    التحقق من تكرار الرسائل من قبل المستخدم.
-    """
-    # لا تطبق القاعدة على المشرفين
-    if get_user_rank(message.from_user.id, message.chat.id) >= ADMIN:
-        return False
-
-    user_id = message.from_user.id
-    current_time = time.time()
-
-    if user_id not in user_message_times:
-        user_message_times[user_id] = []
-
-    user_message_times[user_id].append(current_time)
-    user_message_times[user_id] = [t for t in user_message_times[user_id] if current_time - t < FLOOD_WINDOW]
-
-    if len(user_message_times[user_id]) > FLOOD_LIMIT:
-        try:
-            bot.restrict_chat_member(message.chat.id, user_id, until_date=time.time() + 60)
-            bot.send_message(message.chat.id, f"تم تقييد {message.from_user.first_name} لمدة 60 ثانية بسبب التكرار.")
-            user_message_times[user_id] = []
-            return True
-        except Exception as e:
-            print(f"Failed to restrict user for flooding: {e}")
-    return False
-
-# ===============================================
-# أوامر البداية والمساعدة
-# ===============================================
+# ==============================================================================
+# معالجات الأوامر
+# ==============================================================================
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    update_user_info(message)
-    welcome_text = (
-        f"أهلاً بك يا {message.from_user.first_name}! 👋\n\n"
-        "أنا بوت حماية المجموعات. قم بإضافتي إلى مجموعتك ورفعني مشرفاً لأبدأ العمل.\n"
-        "لمعرفة الأوامر المتاحة، أرسل /help"
-    )
-    bot.reply_to(message, welcome_text)
+def start_command(message):
+    db.register_user(message.from_user)
+    if message.chat.type == 'private':
+        bot.reply_to(message, "👋 أهلاً بك! أضفني إلى مجموعتك وارفعني مشرفاً.")
 
 @bot.message_handler(commands=['help', 'الاوامر'])
-def send_help(message):
+def help_command(message):
     help_text = """
-📚 **قائمة الأوامر:**
+🛡 **أوامر الحماية والإدارة:**
 
-🔐 **أوامر القفل والفتح (للمدراء فقط):**
-- /قفل الروابط | /فتح الروابط
-- /قفل الصور | /فتح الصور
-- /قفل الفيديو | /فتح الفيديو
-- /قفل الملصقات | /فتح الملصقات
-- /قفل البوتات | /فتح البوتات
+👮‍♂️ **للإداريين:**
+- `قفل/فتح [الروابط|الصور|الفيديو|الخ]`
+- `تحكم` (بالرد)
+- `كشف` (بالرد)
+- `رفع/تنزيل مميز`
+- `رفع/تنزيل مدير`
+- `اضف/حذف رد`
+- `الردود` (لعرض الردود)
 
-👥 **أوامر الإدارة:**
-- رفع/تنزيل (مدير، ادمن) بالرد على العضو
-- كشف (بالرد على العضو لمعرفة معلوماته)
-- تحكم (بالرد على العضو لعرض لوحة التحكم)
-
-🎮 **الألعاب:**
-- /xo (لعبة XO)
-- /سؤال (سؤال وجواب)
-- /اسرع (لعبة سرعة الكتابة)
-
-ℹ️ **أخرى:**
-- /ايدي (معلوماتك)
+🎮 **أخرى:**
+- `ايدي`
     """
     bot.reply_to(message, help_text, parse_mode='Markdown')
 
-# معالج الرسائل العام لتطبيق القواعد والردود والألعاب
-@bot.message_handler(func=lambda message: True, content_types=['text', 'photo', 'video', 'sticker', 'document', 'new_chat_members', 'left_chat_member'])
-def handle_all_messages(message):
-    if message.from_user and message.chat:
-        # 1. Anti-Flood Check
-        if check_for_flood(message):
+@bot.my_chat_member_handler()
+def on_bot_added(message: types.ChatMemberUpdated):
+    new_status = message.new_chat_member.status
+    if new_status in ['member', 'administrator']:
+        db.register_group(message.chat, message.from_user.id)
+        if message.chat.id in admins_cache:
+            del admins_cache[message.chat.id]
+
+LOCK_TYPES = {
+    "الروابط": "lock_links", "الصور": "lock_photos", "الفيديو": "lock_video",
+    "المتحركات": "lock_animation", "الملصقات": "lock_stickers", "البوتات": "lock_bots",
+    "التوجيه": "lock_forward", "المعرفات": "lock_username", "اليوزر": "lock_username",
+    "الرسائل الطويلة": "lock_long_msg", "التكرار": "lock_flood", "السبام": "lock_spam"
+}
+
+@bot.message_handler(func=lambda m: m.text and (m.text.startswith("قفل ") or m.text.startswith("فتح ")) and m.chat.type in ['group', 'supergroup'])
+def handle_locks(message):
+    if get_user_rank(message.from_user.id, message.chat.id) < RANK_ADMIN:
+        bot.reply_to(message, "⚠️ للمشرفين فقط.")
+        return
+
+    command, target = message.text.split(maxsplit=1)
+    target = target.strip()
+
+    if target == "الكل":
+        val = True if command == "قفل" else False
+        for k in LOCK_TYPES.values():
+            db.update_setting(message.chat.id, k, val)
+        bot.reply_to(message, f"✅ تم {command} الكل.")
+        return
+
+    if target in LOCK_TYPES:
+        setting_key = LOCK_TYPES[target]
+        new_val = True if command == "قفل" else False
+        db.update_setting(message.chat.id, setting_key, new_val)
+        bot.reply_to(message, f"✅ تم {command} {target}.")
+    else:
+        bot.reply_to(message, f"❌ غير معروف. المتاح: {', '.join(LOCK_TYPES.keys())}")
+
+@bot.message_handler(func=lambda m: m.text and m.text.startswith(("رفع", "تنزيل")) and m.chat.type in ['group', 'supergroup'])
+def handle_promotions(message):
+    if not message.reply_to_message:
+        bot.reply_to(message, "⚠️ رد على العضو.")
+        return
+
+    args = message.text.split()
+    action = args[0]
+    role_req = args[1] if len(args) > 1 else ""
+
+    chat_id = message.chat.id
+    target_id = message.reply_to_message.from_user.id
+    actor_id = message.from_user.id
+    actor_rank = get_user_rank(actor_id, chat_id)
+    target_rank = get_user_rank(target_id, chat_id)
+
+    if actor_rank <= target_rank and actor_rank != RANK_PRI_DEV:
+        bot.reply_to(message, "⛔️ رتبتك لا تسمح.")
+        return
+
+    target_role = RANK_MEMBER
+    required_rank = RANK_ADMIN
+    if "مدير" in role_req:
+        target_role = RANK_MANAGER
+        required_rank = RANK_SEC_DEV
+    elif "مميز" in role_req:
+        target_role = RANK_DISTINGUISHED
+        required_rank = RANK_ADMIN
+    else:
+        target_role = RANK_DISTINGUISHED
+
+    if actor_rank < required_rank:
+        bot.reply_to(message, "⚠️ رتبتك لا تسمح.")
+        return
+
+    if action == "رفع":
+        db.set_custom_rank(chat_id, target_id, target_role)
+        bot.reply_to(message, f"✅ تم الرفع.")
+    elif action == "تنزيل":
+        db.set_custom_rank(chat_id, target_id, RANK_MEMBER)
+        bot.reply_to(message, "✅ تم التنزيل.")
+
+@bot.message_handler(func=lambda m: m.text == "تحكم" and m.chat.type in ['group', 'supergroup'])
+def control_panel_cmd(message):
+    if not message.reply_to_message: return
+
+    actor_rank = get_user_rank(message.from_user.id, message.chat.id)
+    target_rank = get_user_rank(message.reply_to_message.from_user.id, message.chat.id)
+
+    if actor_rank < RANK_ADMIN: return
+    if actor_rank <= target_rank:
+        bot.reply_to(message, "⛔️ لا تملك صلاحية.")
+        return
+
+    markup = create_control_panel(message.chat.id, message.reply_to_message.from_user.id, message.reply_to_message.from_user.first_name)
+    bot.reply_to(message, f"🔧 تحكم: {message.reply_to_message.from_user.first_name}", reply_markup=markup)
+
+@bot.message_handler(func=lambda m: m.text == "كشف" and m.chat.type in ['group', 'supergroup'])
+def reveal_cmd(message):
+    if not message.reply_to_message: return
+    target = message.reply_to_message.from_user
+    rank = get_user_rank(target.id, message.chat.id)
+    bot.reply_to(message, f"👤 {target.first_name}\n🏅 {get_rank_name(rank)}", parse_mode='Markdown')
+
+@bot.message_handler(func=lambda m: m.text and m.text.startswith("اضف رد") and m.chat.type in ['group', 'supergroup'])
+def add_reply_cmd(message):
+    if get_user_rank(message.from_user.id, message.chat.id) < RANK_ADMIN: return
+    try:
+        parts = message.text.split(maxsplit=2)
+        db.add_reply(message.chat.id, parts[1], parts[2])
+        bot.reply_to(message, "✅ تم الإضافة.")
+    except: pass
+
+@bot.message_handler(func=lambda m: m.text and m.text.startswith("حذف رد") and m.chat.type in ['group', 'supergroup'])
+def del_reply_cmd(message):
+    if get_user_rank(message.from_user.id, message.chat.id) < RANK_ADMIN: return
+    try:
+        db.delete_reply(message.chat.id, message.text.split(maxsplit=1)[1])
+        bot.reply_to(message, "✅ تم الحذف.")
+    except: pass
+
+@bot.message_handler(func=lambda m: m.text == "الردود" and m.chat.type in ['group', 'supergroup'])
+def list_replies_cmd(message):
+    if get_user_rank(message.from_user.id, message.chat.id) < RANK_ADMIN: return
+    replies = db.get_replies(message.chat.id)
+    if not replies:
+        bot.reply_to(message, "لا توجد ردود مخصصة.")
+        return
+    text = "📝 **الردود المخصصة:**\n"
+    for k, v in replies.items():
+        text += f"- `{k}` : {v}\n"
+    bot.reply_to(message, text, parse_mode='Markdown')
+
+# ==============================================================================
+# Callback Query
+# ==============================================================================
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    if call.data == "close_panel":
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        return
+    try:
+        action, target_id = call.data.split('_')
+        target_id = int(target_id)
+    except: return
+
+    chat_id = call.message.chat.id
+    actor_rank = get_user_rank(call.from_user.id, chat_id)
+    target_rank = get_user_rank(target_id, chat_id)
+
+    if actor_rank <= target_rank:
+        bot.answer_callback_query(call.id, "⛔️ ليس لديك صلاحية.", show_alert=True)
+        return
+
+    try:
+        msg = ""
+        if action == "mute":
+            bot.restrict_chat_member(chat_id, target_id, can_send_messages=False)
+            msg = "تم الكتم"
+        elif action == "unmute":
+            bot.restrict_chat_member(chat_id, target_id, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True)
+            msg = "تم الغاء الكتم"
+        elif action == "kick":
+            bot.ban_chat_member(chat_id, target_id)
+            bot.unban_chat_member(chat_id, target_id)
+            msg = "تم الطرد"
+        elif action == "ban":
+            bot.ban_chat_member(chat_id, target_id)
+            msg = "تم الحظر"
+        elif action == "restrict":
+            bot.restrict_chat_member(chat_id, target_id, can_send_messages=True, can_send_media_messages=False)
+            msg = "تم التقييد"
+        elif action == "unrestrict":
+            bot.restrict_chat_member(chat_id, target_id, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True)
+            msg = "تم الغاء التقييد"
+        elif action == "warn":
+            count = db.add_warning(chat_id, target_id)
+            msg = f"تم التحذير ({count})"
+            if count >= 3:
+                bot.restrict_chat_member(chat_id, target_id, until_date=time.time()+3600)
+                db.reset_warnings(chat_id, target_id)
+                bot.send_message(chat_id, f"🛑 تجاوز {target_id} حد الإنذارات وتم كتمه لساعة.")
+        elif action == "resetwarn":
+            db.reset_warnings(chat_id, target_id)
+            msg = "تم تصفير الإنذارات"
+
+        bot.answer_callback_query(call.id, msg)
+        new_markup = create_control_panel(chat_id, target_id, "")
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=new_markup)
+    except Exception as e:
+        bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
+
+# ==============================================================================
+# فلترة الرسائل
+# ==============================================================================
+DEFAULT_REPLIES = {
+    "هلو": "أهلاً وسهلاً 🌸", "هلا": "هلا بيك 👋", "مرحبا": "نورت ✨",
+    "باي": "في أمان الله 🤍", "خاص": "الخاص مفتوح 📩"
+}
+
+@bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'sticker', 'animation', 'document', 'new_chat_members'])
+def global_message_handler(message):
+    if message.chat.type == 'private': return
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    db.register_user(message.from_user)
+
+    rank = get_user_rank(user_id, chat_id)
+    is_immune = rank >= RANK_ADMIN
+    is_distinguished = rank >= RANK_DISTINGUISHED
+
+    if not is_immune:
+        settings = db.get_settings(chat_id)
+
+        # Anti-Flood تدريجي
+        if not is_distinguished:
+            flood_action = check_flood(user_id, chat_id, settings)
+            if flood_action:
+                bot.delete_message(chat_id, message.message_id)
+                if flood_action == "warn":
+                    bot.send_message(chat_id, f"⚠️ {message.from_user.first_name}، توقف عن التكرار! (تحذير)")
+                elif flood_action == "mute":
+                    try:
+                        bot.restrict_chat_member(chat_id, user_id, until_date=time.time()+300)
+                        bot.send_message(chat_id, f"🤐 تم كتم {message.from_user.first_name} 5 دقائق للتكرار.")
+                    except: pass
+                elif flood_action == "kick":
+                    try:
+                        bot.ban_chat_member(chat_id, user_id)
+                        bot.unban_chat_member(chat_id, user_id)
+                        bot.send_message(chat_id, f"👢 تم طرد {message.from_user.first_name} للتكرار المستمر.")
+                    except: pass
+                return
+
+        should_delete = False
+
+        # فحص طول الرسالة (يستثنى منه المميز)
+        if settings['lock_long_msg'] and message.text and len(message.text) > settings['max_msg_len']:
+            if not is_distinguished:
+                should_delete = True
+
+        # فحص السبام (تكرار نفس الرسالة - بسيط)
+        # هنا نحتاج كاش لآخر رسالة، لكن للتبسيط سنعتمد على التكرار الزمني (Anti-Flood)
+        # أو يمكننا إضافة فحص سريع هنا إذا كان المحتوى مطابق تماما للسابق (يتطلب كاش إضافي)
+        # سنكتفي بالAnti-Flood القوي الذي يغطي السبام الزمني.
+
+        if settings['lock_links'] and message.entities:
+            for ent in message.entities:
+                if ent.type in ['url', 'text_link']: should_delete = True
+
+        if settings['lock_photos'] and message.photo: should_delete = True
+        if settings['lock_video'] and message.video: should_delete = True
+        if settings['lock_animation'] and message.animation: should_delete = True
+        if settings['lock_stickers'] and message.sticker: should_delete = True
+        if settings['lock_forward'] and (message.forward_from or message.forward_from_chat): should_delete = True
+        if settings['lock_username'] and message.text and "@" in message.text: should_delete = True
+
+        if settings['lock_bots'] and message.new_chat_members:
+            for m in message.new_chat_members:
+                if m.is_bot:
+                    try: bot.kick_chat_member(chat_id, m.id)
+                    except: pass
+
+        if should_delete:
+            try: bot.delete_message(chat_id, message.message_id)
+            except: pass
             return
 
-        # 2. Game Answer Check
-        if message.text and check_game_answers(message):
-            increment_message_count(message.from_user.id, message.chat.id) # Count game answers as messages
-            return
-
-        # 3. Auto-Replies
-        if handle_auto_replies(message):
-            increment_message_count(message.from_user.id, message.chat.id) # Count auto-replied messages
-            return
-
-        # 4. Standard message processing
-        update_user_info(message)
-        if message.chat.type in ['group', 'supergroup']:
-            add_group_info(message)
-            increment_message_count(message.from_user.id, message.chat.id)
-
-            user_rank = get_user_rank(message.from_user.id, message.chat.id)
-            if user_rank >= ADMIN:
-                return # Admins are exempt from content locks
-
-            # 5. Content Locks
-            settings = get_group_settings(message.chat.id)
-            if settings.get('lock_links') and message.entities:
-                for entity in message.entities:
-                    if entity.type in ['url', 'text_link']:
-                        bot.delete_message(message.chat.id, message.message_id)
-                        return
-            if settings.get('lock_photos') and message.photo:
-                bot.delete_message(message.chat.id, message.message_id)
+    if message.text:
+        custom_replies = db.get_replies(chat_id)
+        for key, reply in custom_replies.items():
+            if key in message.text:
+                bot.reply_to(message, reply)
                 return
-            if settings.get('lock_videos') and message.video:
-                bot.delete_message(message.chat.id, message.message_id)
+        for key, reply in DEFAULT_REPLIES.items():
+            if key in message.text:
+                bot.reply_to(message, reply)
                 return
-            if settings.get('lock_stickers') and message.sticker:
-                bot.delete_message(message.chat.id, message.message_id)
-                return
-            if settings.get('lock_bots') and message.new_chat_members:
-                for new_member in message.new_chat_members:
-                    if new_member.is_bot:
-                        bot.kick_chat_member(message.chat.id, new_member.id)
-                        bot.send_message(message.chat.id, f"تم طرد البوت {new_member.first_name} لأن إضافة البوتات مقفولة.")
-                        return
 
-
-# بدء تشغيل البوت
-if __name__ == '__main__':
-    bot.polling(none_stop=True)
+if __name__ == "__main__":
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)
